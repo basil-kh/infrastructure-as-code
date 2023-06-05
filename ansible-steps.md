@@ -1,3 +1,4 @@
+![Alt text](imgs-iac/3.myansiblediag5.png)
 # SSH into app through controller
 ```bash
 vagrant up
