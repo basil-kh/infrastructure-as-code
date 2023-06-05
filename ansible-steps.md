@@ -1,3 +1,4 @@
+# SSH into app through controller
 ```bash
 vagrant up
 vagrant ssh controller
@@ -9,6 +10,7 @@ exit
 ```
 returns somthing similiar to :
 ![Alt text](imgs-steps/1.png)
+# SSH into db through controller
 ```bash
 # ssh into the db
 vagrant ssh 192.168.33.11
@@ -16,7 +18,7 @@ vagrant ssh 192.168.33.11
 # password - vagrant
 exit
 ```
-
+# Install Ansible and prerequisites
 ```bash
 sudo apt install software-properties-common
 sudo apt-add-repository ppa:ansible/ansible -y
@@ -26,10 +28,9 @@ cd /etc/ansible
 sudo apt install tree
 # nice way to see file structure
 tree
-# pings all
-
-# if you have vault setup
-sudo ansible all -m ping --ask-vault-pass
+```
+# Changing configs
+```bash
 # edits hosts file
 sudo nano /etc/ansible/hosts
 # add 4 lines to bottom of hosts file: 
@@ -47,7 +48,7 @@ sudo nano /etc/ansible/ansible.cfg
 ![Alt text](imgs-steps/2.png)
 ![Alt text](imgs-steps/3.png)
 
-Now you can 
+# Ping App and DB
 ```bash
 # pings all
 sudo ansible all -m ping
@@ -61,6 +62,6 @@ sudo ansible web -m ping
 # ping db
 sudo ansible db -m ping
 ```
-Should receive pong requests from app and db.
+Should receive pong requests from app and db to confirm secure connection.
 
 ![Alt text](imgs-steps/4.png)![Alt text](imgs-steps/5.png)
