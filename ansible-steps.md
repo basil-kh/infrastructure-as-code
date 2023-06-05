@@ -33,7 +33,7 @@ tree
 ```bash
 # edits hosts file
 sudo nano /etc/ansible/hosts
-# add 4 lines to bottom of hosts file: 
+# add 4 lines to bottom of hosts file, so ansible knows node agents addresses and login details: 
 [web]
 192.168.33.10 ansible_connection=ssh ansible_ssh_user=vagrant ansible_ssh_pass=vagrant
 [db]
@@ -64,4 +64,5 @@ sudo ansible db -m ping
 ```
 Should receive pong requests from app and db to confirm secure connection.
 
-![Alt text](imgs-steps/4.png)![Alt text](imgs-steps/5.png)
+![Alt text](imgs-steps/5.png)
+![Alt text](imgs-steps/4.png)
