@@ -67,3 +67,4 @@ Should receive pong requests from app and db to confirm secure connection.
 
 ![Alt text](imgs-steps/5.png)
 ![Alt text](imgs-steps/4.png)
+.
