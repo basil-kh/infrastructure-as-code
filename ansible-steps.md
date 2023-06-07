@@ -69,11 +69,13 @@ Should receive pong requests from app and db to confirm secure connection.
 
 ![Alt text](imgs-steps/5.png)
 ![Alt text](imgs-steps/4.png)
-.
+
+>If you want to pause your VMs you can use the following commands:
+```
 vagrant suspend
 vagrant resume
 vagrant reload 
-
+```
 - when loading into ansible make sure you are in the right directory `cd /etc/ansible` not `/home/vagrant`
 
 
@@ -136,7 +138,7 @@ if runs correctly
 sudo ansible web -a "sudo systemctl status nginx"
 ```
 
-![Alt text](imgs-steps/8.png)
+![Alt text](imgs-steps/8.1.png)
 ![Alt text](imgs-steps/9.png)
 # Installing nodejs
 ```bash
@@ -251,53 +253,174 @@ sudo ansible-playbook reverse-proxy.yml
 
 Collecting all the steps into a single yaml file : 
 
+
 ```yaml
+---
+# A playbook targeting the 'web' hosts
 - hosts: web
+  # Gather facts about the hosts for later use
   gather_facts: yes
-  become: true
+  # Run tasks with administrative permissions
+  become: yes
   tasks:
+    # Install the Nginx web server
     - name: Installing Nginx
-      apt: 
-        pkg: nginx 
+      apt: pkg=nginx state=present
+
+    # Install Git for cloning the application repository
+    - name: Installing Git
+      apt:
+        name: git
         state: present
 
+    # Clone the application repository into the '/home/vagrant/app' directory
+    - name: Clone the app repository
+      git:
+        repo: 'https://github.com/basil-kh/app.git'
+        dest: '/home/vagrant/app'
+      become: yes
+      become_user: vagrant
+
+    # Add the Node.js PPA for installing a specific version of Node.js
     - name: Add Node.js PPA
       shell: "curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -"
       args:
         warn: no
 
+    # Install Node.js from the added PPA
     - name: Install Node.js
       apt:
         name: nodejs
         update_cache: yes
         state: present
 
+    # Install npm, the Node.js package manager
     - name: Install npm
       apt:
         name: npm
         state: present
 
+    # Install the application's npm packages
     - name: Install npm packages
-      command:
-        cmd: npm install
-        chdir: /home/vagrant/app
-      become_user: vagrant
-
-    - name: Start the npm application
       shell:
-        cmd: nohup npm start > /dev/null 2>&1 &
+        cmd: export DB_HOST=mongodb://192.168.33.11:27017/posts && npm install
         chdir: /home/vagrant/app
+      become: yes
       become_user: vagrant
 
+    # Start the application's Node.js server
+    # `nohup npm start > /dev/null 2>&1 &` is a command that starts your Node.js application in the background, with all output (both regular and error messages) discarded, and it ensures that this process won't end when you log out or exit the shell.
+    - name: Stop the npm application
+      shell:
+        cmd: pkill node
+        chdir: /home/vagrant/app
+      become: yes
+      become_user: vagrant
+      ignore_errors: yes  # This is to ensure playbook doesn't fail if no node processes were running
+
+    - name: Start the npm application with new environment variables
+      shell:
+        cmd: export DB_HOST=mongodb://192.168.33.11:27017/posts && nohup npm start > /dev/null 2>&1 &
+        chdir: /home/vagrant/app
+      become: yes
+      become_user: vagrant
+
+    # Update the Nginx configuration to proxy to the application's Node.js server
     - name: Substitute nginx configuration line
       replace:
         path: /etc/nginx/sites-available/default
         regexp: 'try_files \$uri \$uri/ =404;'
         replace: 'proxy_pass http://localhost:3000/;'
 
-    - name: Restart nginx service
-      service:
+
+    # Restart the Nginx service so the configuration change takes effect
+    - name: restart nginx
+      service: 
         name: nginx
         state: restarted
 
+
+```
+
+# Setting up mongo 
+First write the yaml file to install mongodb on the db VM
+```yaml
+# install required version of mongodb in db-server
+# hosts entries are already done - ssh/password authentication in place
+---
+# hosts name
+- hosts: db
+
+# get facts(logs)
+  gather_facts: yes
+
+# admin access
+  become: true
+
+# add instructions
+  tasks:
+  - name: setting up MongoDB
+    apt: pkg=mongodb state=present
+
+# ensure the db is running - status active
+
+```
+![Alt text](imgs-steps/16.png)
+can then check if mongodb was installed and is running correctly
+```
+sudo ansible db -a "sudo systemctl status mongodb"
+```
+Should get something similar to :
+
+![Alt text](imgs-steps/17.png)
+
+```
+sudo nano /etc/mongodb.conf
+# change ip and port to 0.0.0.0 and port uncomment
+```
+
+```
+sudo systemctl restart mongodb
+sudo systemctl enable mongodb
+
+```
+
+
+
+
+
+# Automating mongodb configuration
+
+We would have to install mongo and then in the config file change the ip to 0.0.0.0 and uncomment the port we can do this with the following yaml code:
+
+
+```yaml
+# install required version of mongodb in db-server
+# hosts entries are already done - ssh/password authentication in place
+---
+# hosts name
+- hosts: db
+
+# get facts(logs)
+  gather_facts: yes
+
+# admin access
+  become: true
+
+# add instructions
+  tasks:
+  - name: setting up MongoDB
+    apt: pkg=mongodb state=present
+
+  - name: Changing bindip in mongodb config file
+    replace:
+      path: /etc/nginx/sites-available/default
+      regexp: 'bind_ip = 127.0.0.1'
+      replace: 'bind_ip = 0.0.0.0'
+      
+  - name: Restart mongodb service
+    service:
+      name: mongodb
+      state: restarted
+      enabled: yes
 ```
